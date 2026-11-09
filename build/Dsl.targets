@@ -1,0 +1,22 @@
+<Project>
+  <!-- 앱(C#) 프로젝트가 가져다 쓴다: 빌드 때 dsl 을 실행해 obj/dsl/ 에 계약 · 부품(C#)과 웹 다리(JS)를 만들고 컴파일에 넣는다.
+       생성물은 저장소에 두지 않는다 — 바뀐 것은 명세(dsl/Spec.fs)로 보고, 그 영향은 컴파일 오류로 확인한다.
+       앱은 DslTargets 에 contracts 와 자기 UI(avalonia | android)를 적는다 -->
+  <PropertyGroup>
+    <DslOut>$(MSBuildProjectDirectory)/obj/dsl/</DslOut>
+    <DslDll>$(MSBuildThisFileDirectory)../dsl/bin/$(Configuration)/net10.0/Dsl.dll</DslDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../dsl/Dsl.fsproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true"
+                      UndefineProperties="TargetFramework;RuntimeIdentifier;SelfContained;PublishAot;PublishTrimmed;PublishSingleFile" />
+    <!-- IDE 에서도 보이게(첫 빌드 뒤) -->
+    <Compile Include="$(DslOut)*.g.cs" />
+  </ItemGroup>
+  <Target Name="DslGenerate" AfterTargets="ResolveProjectReferences" Condition="'$(DslTargets)' != ''">
+    <Exec Command="dotnet &quot;$(DslDll)&quot; &quot;$(DslOut)&quot; $(DslTargets) web" />
+    <ItemGroup>
+      <Compile Remove="$(DslOut)*.g.cs" />
+      <Compile Include="$(DslOut)*.g.cs" />
+    </ItemGroup>
+  </Target>
+</Project>

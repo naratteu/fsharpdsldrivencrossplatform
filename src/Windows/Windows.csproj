@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Windows 앱 — Avalonia 12 + 공식 WebView. 상단 바 부품 · 계약은 dsl 이 생성한다(build/Dsl.targets)
+         dotnet publish src/Windows -r win-x64 -c Release     (-r win-arm64 도 같다. 맥 · Linux 에서도 된다) -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FSharpDslDrivenCrossPlatform</AssemblyName>
+    <RootNamespace>App</RootNamespace>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+    <!-- WebView2 공식 래퍼(문서 시작 스크립트 · 권한)는 옛 COM 방식 — 트리밍하면 꺼지는 내장 COM 을 다시 켠다 -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <DslTargets>contracts avalonia</DslTargets>
+  </PropertyGroup>
+  <Import Project="../../build/Dsl.targets" />
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
+    <TrimmerRootAssembly Include="Microsoft.Web.WebView2.Core" />
+  </ItemGroup>
+  <!-- 런처 페이지(web/) + 생성된 다리(obj/dsl/web) → 실행 파일 옆 web/ -->
+  <ItemGroup>
+    <Content Include="../../web/**" LinkBase="web" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="DslWebContent" AfterTargets="DslGenerate">
+    <ItemGroup>
+      <DslWeb Include="$(DslOut)web/*.js" />
+      <Content Include="@(DslWeb)" Link="web/%(DslWeb.Filename)%(DslWeb.Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

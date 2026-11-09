@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Android 앱 — Activity + WebView. 상단 바 부품 · 계약은 dsl 이 생성한다(build/Dsl.targets)
+         dotnet publish src/Android -c Release -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>App</RootNamespace>
+    <ApplicationId>com.example.fsharpdsldrivencrossplatform</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <TrimMode>full</TrimMode>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <DslTargets>contracts android</DslTargets>
+  </PropertyGroup>
+  <Import Project="../../build/Dsl.targets" />
+  <ItemGroup>
+    <PackageReference Include="Xamarin.AndroidX.WebKit" Version="1.17.1" />
+  </ItemGroup>
+  <!-- 런처 페이지(web/) + 생성된 다리(obj/dsl/web) → assets/web/ -->
+  <ItemGroup>
+    <AndroidAsset Include="../../web/**" Link="Assets/web/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="DslWebAssets" AfterTargets="DslGenerate">
+    <ItemGroup>
+      <DslWeb Include="$(DslOut)web/*.js" />
+      <AndroidAsset Include="@(DslWeb)" Link="Assets/web/%(DslWeb.Filename)%(DslWeb.Extension)" />
+    </ItemGroup>
+  </Target>
+</Project>

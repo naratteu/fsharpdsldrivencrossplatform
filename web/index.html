@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>업무 모듈</title>
+  <style>
+    :root { --text: #1A1A1A; --sub: #6B7280; --line: #E3E6EA; --bar: #24527A; }
+    body { margin: 0; background: #FDFDFB; color: var(--text); font: 15px system-ui, "Segoe UI", "Malgun Gothic", sans-serif; }
+    main { max-width: 1200px; margin: 0 auto; padding: 48px 24px; text-align: center; }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    .sub { color: var(--sub); margin: 0 0 32px; }
+    #cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+    .card { width: 260px; box-sizing: border-box; padding: 24px; text-align: left; cursor: pointer; font: inherit; color: inherit;
+            background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 4px 12px rgb(0 0 0 / 6%); }
+    .card.open { border: 2px solid var(--accent); padding: 23px; }
+    .card .top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .card .icon { width: 56px; height: 56px; border-radius: 12px; background: var(--accent); color: #fff;
+                  display: grid; place-items: center; font-weight: 700; }
+    .card .badge { color: var(--accent); font-size: 12px; font-weight: 700; }
+    .card h2 { font-size: 22px; margin: 12px 0 6px; }
+    .card p { margin: 0; color: var(--sub); font-size: 14px; }
+    form { margin-top: 32px; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; color: var(--sub); font-size: 13px; }
+    input { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; width: 260px; }
+    button.save { font: inherit; font-weight: 700; color: var(--bar); background: none; border: 0; padding: 6px 8px; cursor: pointer; }
+    #platform { margin-top: 12px; color: var(--sub); font-size: 12px; }
+    #camera { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    #camera[hidden], #camera [hidden] { display: none; }
+    #camera video { max-width: 100%; max-height: calc(100% - 96px); }
+    #camera p { color: #fff; margin: 0; }
+    #camera .row { display: flex; gap: 12px; }
+    #camera button { font: inherit; font-weight: 700; padding: 12px 28px; border-radius: 999px; border: 0; cursor: pointer; }
+    #shoot { background: #fff; color: #000; }
+    #cancel { background: #444; color: #fff; }
+  </style>
+  <script src="bridge.g.js"></script>
+</head>
+<body>
+  <main>
+    <h1>업무 모듈 선택</h1>
+    <p class="sub">열려 있는 모듈은 상단 탭으로 전환할 수 있습니다. 스캔 값은 현재 보고 있는 탭으로만 전달됩니다.</p>
+    <div id="cards"></div>
+    <form id="server">
+      <label for="url">서버</label>
+      <input id="url" inputmode="url" autocomplete="off" spellcheck="false">
+      <button class="save" id="save">변경</button>
+    </form>
+    <div id="platform"></div>
+  </main>
+  <!-- 모듈 페이지가 window.app.takePhoto() 로 부르면 앱이 이 화면을 띄운다 -->
+  <div id="camera" hidden>
+    <video id="video" autoplay playsinline muted></video>
+    <p id="cameraError" hidden></p>
+    <div class="row"><button id="shoot">찍기</button><button id="cancel">취소</button></div>
+  </div>
+  <script>
+    let state = { server: '', opened: [] };
+    const cards = document.getElementById('cards');
+    const url = document.getElementById('url');
+    const save = document.getElementById('save');
+
+    const render = () => {
+      cards.replaceChildren(...bridge.modules.map((m) => {
+        const open = state.opened.includes(m.key);
+        const b = document.createElement('button');
+        b.className = 'card' + (open ? ' open' : '');
+        b.style.setProperty('--accent', m.accent);
+        b.innerHTML = `<div class="top"><div class="icon"></div><span class="badge">${open ? '열림' : ''}</span></div><h2></h2><p></p>`;
+        b.querySelector('.icon').textContent = m.name;
+        b.querySelector('h2').textContent = m.name;
+        b.querySelector('p').textContent = m.description;
+        b.onclick = () => bridge.openModule(m.key);
+        return b;
+      }));
+      if (document.activeElement !== url) url.value = state.server;
+      updateSave();
+    };
+    // 탭이 열려 있으면 바꾸는 순간 모두 닫힌다는 걸 버튼에 적는다(confirm 창 대신)
+    const updateSave = () => {
+      save.textContent = url.value.trim() && url.value.trim() !== state.server && state.opened.length ? '탭 모두 닫고 변경' : '변경';
+    };
+    url.oninput = updateSave;
+    document.getElementById('server').onsubmit = (e) => { e.preventDefault(); bridge.setServer(url.value); url.blur(); };
+
+    // 카메라 — 결과는 JPEG base64, 취소 · 실패면 ""
+    const camera = document.getElementById('camera');
+    const video = document.getElementById('video');
+    const cameraError = document.getElementById('cameraError');
+    let stream = null;
+    const closeCamera = (data) => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null; video.srcObject = null; camera.hidden = true;
+      bridge.photo(data);
+    };
+    const openCamera = async () => {
+      camera.hidden = false; cameraError.hidden = true; video.hidden = false;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+      } catch (e) {
+        video.hidden = true; cameraError.hidden = false; cameraError.textContent = '카메라를 열 수 없습니다 — ' + e.message;
+      }
+    };
+    document.getElementById('shoot').onclick = () => {
+      if (!stream || !video.videoWidth) return;
+      const c = document.createElement('canvas');
+      c.width = video.videoWidth; c.height = video.videoHeight;
+      c.getContext('2d').drawImage(video, 0, 0);
+      closeCamera(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+    };
+    document.getElementById('cancel').onclick = () => closeCamera('');
+
+    bridge.onMessage((m) => {
+      if (m.type === 'Launcher') { state = m; render(); }
+      if (m.type === 'Camera') openCamera();
+      if (m.type === 'Hello') document.getElementById('platform').textContent = `${m.platform} · NativeAOT ${m.nativeAot ? '예' : '아니오'}`;
+    });
+    render();
+    bridge.ready();
+  </script>
+</body>
+</html>

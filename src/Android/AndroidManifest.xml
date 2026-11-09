@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- 현장 서버는 http 인 경우가 많다 -->
+  <application android:label="fsharpdsldrivencrossplatform" android:supportsRtl="true" android:usesCleartextTraffic="true" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <!-- USB 스캐너 — 없는 기기에도 설치되게 -->
+  <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+  <!-- 사진 — 런처의 카메라 화면 -->
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+</manifest>
