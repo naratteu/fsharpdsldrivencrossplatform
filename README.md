@@ -78,6 +78,22 @@ let grants = [
 - 요청은 서버 출처에서 온 것만 받고, 허락 검사는 생성된 코드가 한다
 - 사진은 모듈 페이지가 카메라를 직접 쓰지 않는다 — 앱이 자기 카메라 화면(런처)을 띄워 찍고 결과만 돌려준다
 
+## 배포 방식
+
+기본은 트리밍. NativeAOT 는 실험 브랜치에 나눠 둔다 — 브랜치의 차이가 곧 NativeAOT 에 더 필요한 것이다.
+
+| | 트리밍 (main) | NativeAOT |
+|---|---|---|
+| Windows 배포 폴더(pdb 빼고) | 45MB | 35MB (exe 18MB) — [`experiment/windows-aot`](../../tree/experiment/windows-aot) |
+| Windows 메모리 | 130MB | 96MB |
+| Android APK | 10.2MB | 7.9MB — [`experiment/android-aot`](../../tree/experiment/android-aot) |
+| Android 메모리(PSS) | 88.6MB | 80.5MB |
+
+Windows 는 arm64 Windows 11 샌드박스, Android 는 arm64 에뮬레이터에서 모듈 탭을 열고 사진 요청까지 한 뒤 잰 값.
+
+- Windows NativeAOT: 공식 WebView2 래퍼(옛 COM 방식)를 못 써서, 쓰는 COM 인터페이스(문서 시작 스크립트 · 메시지 · 권한)만 C# 으로 선언한다(`WebView2Com.cs`). 맥 · Linux 에서 교차 빌드하려고 AotAnywhere 를 쓴다
+- Android NativeAOT: `PublishAot` 만 켜면 된다. 아직 실험 기능이고 arm64 · x64 만 된다
+
 ## 빌드
 
 ```sh
