@@ -13,7 +13,7 @@ F# 를 활용한 DSL 주도 크로스플랫폼 개발 PoC.
 |---|---|---|
 | 명세 | 자연어 문서. 사람(이나 언어 모델)이 읽고 해석한다 | 타입이 있는 코드. 컴파일러가 읽는다 |
 | 플랫폼 코드 | 명세를 보고 플랫폼마다 새로 짠다(언어 모델이 짜기도 한다) | 명세에서 결정론적으로 생성된다 |
-| 명세가 바뀌면 | 다시 해석해 다시 짠다 — 무엇이 바뀌었는지는 사람이 확인한다 | 다시 생성되고, 영향받는 곳이 **컴파일 오류**로 드러난다 |
+| 명세가 바뀌면 | 다시 해석해 다시 짠다 — 무엇이 바뀌었는지는 사람이 확인한다 | 다시 생성되고, 앱이 손대야 하는 곳이 **컴파일 오류**로 드러난다 |
 | 어울리는 일 | 철마다 화면을 갈아엎는 서비스 — 어차피 새로 짤 것이라 해석이 조금 달라져도 거리낄 게 없다 | 오래 가는 업무 시스템 — 작은 변화도 하나하나 추적하고, 시스템을 보수적이고 자명하게 유지한다 |
 
 DSL 은 범용 언어가 아니다. 이 앱에 필요한 만큼의 낱말(`dsl/Model.fs`)만 있고, 필요해지면 명세와 함께 는다.
@@ -31,7 +31,7 @@ src/Android/        C# — Activity + WebView
 web/index.html      런처 페이지(모듈 카드 · 서버 주소 · 카메라 화면)
 ```
 
-생성물은 저장소에 두지 않는다(`obj/dsl/`, IDE 에서는 보인다). 바뀐 것은 명세로 보고, 그 영향은 컴파일로 확인한다.
+생성물은 저장소에 두지 않는다 — 빌드하면 `obj/dsl/` 에 생기고 거기서 볼 수 있다. 바뀐 것은 명세로 보고, 그 영향은 컴파일로 확인한다.
 
 ### 명세에 담는 것 — "무엇을 가졌나"
 
@@ -65,6 +65,9 @@ src/Android/MainActivity.cs error CS0535: 'MainActivity' does not implement inte
 
 모듈 페이지용 타입(`app.g.d.ts`)에는 `vibrate(ms: number): Promise<null>` 이 바로 생긴다.
 
+컴파일 오류가 나는 것은 앱이 구현해야 하는 것(런처 메시지 `ILauncherHandler`, 앱 기능 `ICapabilities`)과, 앱이 쓰던 이름(부품 · 속성 · 메시지)이 바뀌거나 사라진 경우다.
+모듈 · 부품 · 앱 → 런처 메시지를 **더하는** 것은 오류 없이 반영된다(모듈은 데이터로, 부품 · 메시지는 앱이 쓰기 시작할 때까지 쓰이지 않는 채로).
+
 ## 앱 기능과 허락
 
 ```fsharp
@@ -86,20 +89,27 @@ let grants = [
 |---|---|---|
 | Windows 배포 폴더(pdb 빼고) | 45MB | 35MB (exe 18MB) — [`experiment/windows-aot`](../../tree/experiment/windows-aot) |
 | Windows 메모리 | 130MB | 96MB |
-| Android APK | 10.2MB | 7.9MB — [`experiment/android-aot`](../../tree/experiment/android-aot) |
+| Android APK | 9.7MB | 7.5MB — [`experiment/android-aot`](../../tree/experiment/android-aot) |
 | Android 메모리(PSS) | 88.6MB | 80.5MB |
 
-Windows 는 arm64 Windows 11 샌드박스, Android 는 arm64 에뮬레이터에서 모듈 탭을 열고 사진 요청까지 한 뒤 잰 값.
+Windows 는 arm64 Windows 11 샌드박스, Android 는 arm64 에뮬레이터에서 모듈 탭을 열고 사진 요청까지 한 뒤 잰 값(MB = 1024²바이트, pdb · xml 제외).
 
-- Windows NativeAOT: 공식 WebView2 래퍼(옛 COM 방식)를 못 써서, 쓰는 COM 인터페이스(문서 시작 스크립트 · 메시지 · 권한)만 C# 으로 선언한다(`WebView2Com.cs`). 맥 · Linux 에서 교차 빌드하려고 AotAnywhere 를 쓴다
+- Windows NativeAOT: 공식 WebView2 래퍼(옛 COM 방식)를 못 써서, 쓰는 COM 인터페이스(문서 시작 스크립트 · 메시지 · 권한)만 C# 으로 선언한다(`WebView2Com.cs`). 맥 · Linux 에서 교차 빌드하려고 AotAnywhere 를 쓴다(맥에서만 확인)
 - Android NativeAOT: `PublishAot` 만 켜면 된다. 아직 실험 기능이고 arm64 · x64 만 된다
 
 ## 빌드
 
 ```sh
-dotnet publish src/Windows -r win-x64 -c Release    # win-arm64 도 같다. 맥 · Linux 에서도 된다
+dotnet publish src/Windows -r win-x64 -c Release    # win-arm64 도 같다. 맥에서 교차 빌드 확인
 dotnet publish src/Android -c Release
 ```
+
+## 확인하지 않은 것
+
+- 실제 스캐너 연결 — 기기가 없어 빌드 · 앱 시작까지만 확인했다
+- Windows 에서 사진 찍기 — 샌드박스에 카메라가 없어 카메라 화면 · 취소(null)까지만 확인했다(Android 에뮬레이터에서는 찍어 돌려받기까지 확인)
+- win-x64 실행 — 빌드만 했다(실행은 win-arm64)
+- Linux 에서 빌드
 
 ## 라이선스
 
