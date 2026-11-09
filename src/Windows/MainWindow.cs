@@ -7,7 +7,6 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Dsl;
-using Microsoft.Web.WebView2.Core;
 
 namespace App;
 
@@ -58,7 +57,7 @@ sealed class MainWindow : Window, ILauncherHandler, ICapabilities
         {
             // 카메라는 런처(앱 자체 페이지)에만
             if (Core(_launcher) is { } core)
-                core.PermissionRequested += (_, e) => { if (e.PermissionKind == CoreWebView2PermissionKind.Camera) e.State = CoreWebView2PermissionState.Allow; };
+                core.AddPermissionRequested(new PermissionRequested(e => { if (e.GetPermissionKind() == 2 /* 카메라 */) e.SetState(1 /* 허락 */); }), out _);
             _launcher.Navigate(new Uri(Path.Combine(AppContext.BaseDirectory, "web", "index.html")));
         };
 
@@ -70,8 +69,8 @@ sealed class MainWindow : Window, ILauncherHandler, ICapabilities
         RenderBar();
     }
 
-    static CoreWebView2? Core(NativeWebView web) =>
-        web.TryGetPlatformHandle() is IWindowsWebView2PlatformHandle h ? CoreWebView2.CreateFromComICoreWebView2(h.CoreWebView2) : null;
+    static ICoreWebView2? Core(NativeWebView web) =>
+        web.TryGetPlatformHandle() is IWindowsWebView2PlatformHandle h ? WebView2Com.From(h.CoreWebView2) : null;
 
     static void Run(NativeWebView web, string script) => _ = web.InvokeScript(script);
 
@@ -136,19 +135,20 @@ sealed class MainWindow : Window, ILauncherHandler, ICapabilities
         if (Modules.Find(key) is not { } module) { Log($"모르는 모듈 {key}"); return; }
         var url = _server.TrimEnd('/') + module.Path;
         var web = new NativeWebView { IsVisible = false };
-        web.AdapterCreated += async (_, _) =>
+        web.AdapterCreated += (_, _) =>
         {
             // 이 모듈에 허락한 앱 기능(window.app) — 서버 출처에서 온 요청만 받는다
             if (Capabilities.Script(key) is { Length: > 0 } script && Core(web) is { } core)
             {
-                await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
-                core.WebMessageReceived += async (_, e) =>
+                core.AddWebMessageReceived(new WebMessageReceived(async (source, json) =>
                 {
-                    if (Origin(e.Source) != Origin(_server)) return;
-                    Run(web, await Capabilities.Handle(key, e.TryGetWebMessageAsString(), this));
-                };
+                    if (Origin(source) != Origin(_server)) return;
+                    Run(web, await Capabilities.Handle(key, json, this));
+                }), out _);
+                // 스크립트가 등록된 뒤에 탐색해야 첫 페이지부터 들어간다
+                core.AddScriptToExecuteOnDocumentCreated(script, new ScriptAdded(_ => web.Navigate(new Uri(url))));
             }
-            web.Navigate(new Uri(url));
+            else web.Navigate(new Uri(url));
         };
         _webs[key] = web;
         _tabs.Add(key);
