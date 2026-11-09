@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Android 앱 — Activity + WebView. 상단 바 부품 · 계약은 dsl 이 생성한다(build/Dsl.targets)
+         NativeAOT(실험) — arm64 · x64 만
          dotnet publish src/Android -c Release -->
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
@@ -10,7 +11,7 @@
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <TrimMode>full</TrimMode>
+    <PublishAot>true</PublishAot>
     <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
     <DslTargets>contracts android</DslTargets>
   </PropertyGroup>
