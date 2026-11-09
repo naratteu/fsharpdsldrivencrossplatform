@@ -62,10 +62,11 @@ sealed class MainWindow : Window, ILauncherHandler, ICapabilities
             _launcher.Navigate(new Uri(Path.Combine(AppContext.BaseDirectory, "web", "index.html")));
         };
 
-        UsbScanner.Start(
-            data => Dispatcher.UIThread.Post(() => { if (_active is { } key) Run(_webs[key], ModuleEvents.Scan(data)); }),
-            on => Dispatcher.UIThread.Post(() => { _scanners = Math.Max(0, _scanners + (on ? 1 : -1)); RenderBar(); }),
-            Log);
+        if (OperatingSystem.IsWindows())
+            UsbScanner.Start(
+                data => Dispatcher.UIThread.Post(() => { if (_active is { } key) Run(_webs[key], ModuleEvents.Scan(data)); }),
+                on => Dispatcher.UIThread.Post(() => { _scanners = Math.Max(0, _scanners + (on ? 1 : -1)); RenderBar(); }),
+                Log);
         RenderBar();
     }
 

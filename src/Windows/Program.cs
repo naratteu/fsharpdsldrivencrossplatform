@@ -19,6 +19,11 @@ sealed class App : Application
 static class Program
 {
     [STAThread]
-    static int Main(string[] args) =>
-        AppBuilder.Configure<App>().UsePlatformDetect().StartWithClassicDesktopLifetime(args);
+    static int Main(string[] args)
+    {
+        // 창 앱이라 콘솔이 없다 — 죽으면 실행 파일 옆 crash.txt
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "crash.txt"), $"{DateTime.Now:HH:mm:ss} {e.ExceptionObject}\n");
+        return AppBuilder.Configure<App>().UsePlatformDetect().StartWithClassicDesktopLifetime(args);
+    }
 }

@@ -6,6 +6,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>FSharpDslDrivenCrossPlatform</AssemblyName>
     <RootNamespace>App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
     <!-- WebView2 공식 래퍼(문서 시작 스크립트 · 권한)는 옛 COM 방식 — 트리밍하면 꺼지는 내장 COM 을 다시 켠다 -->

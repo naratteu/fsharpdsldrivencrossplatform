@@ -1,4 +1,5 @@
 using System.IO.Ports;
+using System.Runtime.Versioning;
 using System.Text;
 using Dsl;
 using Microsoft.Win32;
@@ -6,6 +7,7 @@ using Microsoft.Win32;
 namespace App;
 
 /// USB 시리얼 스캐너(Windows) — 지원 기기의 COM 포트가 나타나면 열고, 끊기면 닫는다(2초마다 확인)
+[SupportedOSPlatform("windows")]
 static class UsbScanner
 {
     /// 지원 기기의 COM 포트 이름 — 장치 관리자가 남긴 레지스트리(뺀 기기도 남아 있다)
